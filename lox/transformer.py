@@ -104,3 +104,8 @@ class LoxTransformer(Transformer):
     
     def block(self, *declarations):
         return Block(list(declarations))
+    
+    def if_cmd(self, condition: Expr, then_branch: Stmt, else_branch: Stmt = None):
+        if else_branch is None:
+            else_branch = Block([])
+        return If(condition, then_branch, else_branch)

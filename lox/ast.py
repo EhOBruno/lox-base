@@ -301,6 +301,21 @@ class If(Stmt):
 
     Ex.: if (x > 0) { ... } else { ... }
     """
+    condition: Expr
+    then_branch: Stmt
+    else_branch: Stmt
+
+    def eval(self, ctx: Ctx):
+        cond_value = self.condition.eval(ctx)
+
+        is_truthy = bool(cond_value) and cond_value is not None
+
+        if is_truthy:
+            self.then_branch.eval(ctx)
+        else:
+            self.else_branch.eval(ctx)
+        
+        return None
 
 
 @dataclass

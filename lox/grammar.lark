@@ -8,6 +8,7 @@ program      : declaration*
 ?stmt      : expr ";"
            | print_cmd
            | block
+           | if_cmd
            // | if_cmd
            // | for_cmd
            // | ...
@@ -17,6 +18,8 @@ var_decl     : "var" VAR ("=" expr)? ";"
 print_cmd  : "print" expr ";"
 
 block        : "{" declaration* "}"
+
+if_cmd       : "if" "(" expr ")" stmt ("else" stmt)?
 
 // EXPRESSÕES
 ?expr      : assignment
