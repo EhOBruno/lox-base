@@ -1,12 +1,17 @@
-?start     : program
+?start       : program
 
-program    : stmt*
+program      : declaration*
+
+?declaration : var_decl
+             | stmt
 
 ?stmt      : expr ";"
            | print_cmd
            // | if_cmd
            // | for_cmd
            // | ...
+
+var_decl     : "var" VAR ("=" expr)? ";"
 
 print_cmd  : "print" expr ";"
 

@@ -96,3 +96,8 @@ class LoxTransformer(Transformer):
         
     def setattr_assign(self, target, value):
         return Setattr(target.obj, target.name, value)
+    
+    def var_decl(self, name, value=None):
+        if value is None:
+            value = Literal(None)
+        return VarDef(name.name, value)

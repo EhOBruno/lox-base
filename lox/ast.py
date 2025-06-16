@@ -285,6 +285,13 @@ class VarDef(Stmt):
 
     Ex.: var x = 42;
     """
+    name: str
+    value: Expr
+
+    def eval(self, ctx: Ctx):
+        initial_value = self.value.eval(ctx)
+        ctx.var_def(self.name, initial_value)
+        return initial_value
 
 
 @dataclass
