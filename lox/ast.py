@@ -328,6 +328,12 @@ class Block(Node):
 
     Ex.: { var x = 42; print x;  }
     """
+    declarations: list[Stmt] 
+
+    def eval(self, ctx: Ctx):
+        for declaration in self.declarations:
+            declaration.eval(ctx)
+        return None
 
 
 @dataclass

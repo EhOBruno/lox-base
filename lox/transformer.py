@@ -101,3 +101,6 @@ class LoxTransformer(Transformer):
         if value is None:
             value = Literal(None)
         return VarDef(name.name, value)
+    
+    def block(self, *declarations):
+        return Block(list(declarations))
