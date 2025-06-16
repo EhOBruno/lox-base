@@ -11,7 +11,15 @@ program    : stmt*
 print_cmd  : "print" expr ";"
 
 // EXPRESSÕES
-?expr      : test
+?expr      : assignment
+
+?assignment  : getattr "=" assignment   -> setattr_assign
+             | VAR "=" assignment       -> assign
+             | logic
+
+?logic     : logic "or" test -> or_
+           | logic "and" test -> and_
+           | test
 
 ?test      : test "==" cmp  -> eq
            | test "!=" cmp  -> ne
@@ -27,8 +35,12 @@ print_cmd  : "print" expr ";"
            | factor "-" term  -> sub
            | term
 
-?term      : term "*" atom   -> mul
-           | term "/" atom   -> div 
+?term      : term "*" unary   -> mul
+           | term "/" unary   -> div 
+           | unary
+
+?unary     : "!" unary        -> not_
+           | "-" unary        -> neg
            | atom
 
 ?atom      : NUMBER 
@@ -38,8 +50,11 @@ print_cmd  : "print" expr ";"
            | NIL
            | "(" cmp ")"
            | call
+           | getattr
 
-call       : VAR "(" params ")"
+getattr    : atom "." VAR
+
+call       : atom "(" params ")"
 params     : [ expr ("," expr )* ]
 
 BOOL.2     : "true" | "false"
