@@ -334,6 +334,17 @@ class While(Stmt):
 
     Ex.: while (x > 0) { ... }
     """
+    condition: Expr
+    body: Stmt
+
+    def eval(self, ctx: Ctx):
+        while True:
+            cond_value = self.condition.eval(ctx)
+            is_truthy = bool(cond_value) and cond_value is not None
+            if not is_truthy:
+                break
+            self.body.eval(ctx)
+        return None
 
 
 @dataclass

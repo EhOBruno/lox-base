@@ -109,3 +109,6 @@ class LoxTransformer(Transformer):
         if else_branch is None:
             else_branch = Block([])
         return If(condition, then_branch, else_branch)
+    
+    def while_cmd(self, condition: Expr, body: Stmt):
+        return While(condition, body)
