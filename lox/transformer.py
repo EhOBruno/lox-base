@@ -112,3 +112,45 @@ class LoxTransformer(Transformer):
     
     def while_cmd(self, condition: Expr, body: Stmt):
         return While(condition, body)
+    
+    def for_init(self, init_part=None):
+        if init_part is None or (isinstance(init_part, str) and init_part == ';'):
+            return Block([])
+        
+        if isinstance(init_part, VarDef):
+            return init_part
+        
+        if isinstance(init_part, Expr):
+            return Block([init_part])
+        
+        return init_part
+
+
+    def for_cond(self, condition=None):
+        if condition is None:
+            return Literal(True)
+        return condition
+
+
+    def for_incr(self, increment_part=None):
+        if increment_part is None:
+            return Block([])
+        
+        if isinstance(increment_part, Expr):
+            return Block([increment_part])
+        
+        return increment_part
+
+
+    def for_cmd(self, init: Stmt, condition: Expr, increment: Stmt, body: Stmt):
+        inner_while_body_stmts = [body]
+        inner_while_body_stmts.append(increment)
+        inner_while_body = Block(inner_while_body_stmts)
+
+        while_loop = While(condition, inner_while_body)
+
+        outer_block_stmts = []
+        outer_block_stmts.append(init)
+        outer_block_stmts.append(while_loop)
+
+        return Block(outer_block_stmts)

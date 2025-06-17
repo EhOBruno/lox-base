@@ -317,16 +317,6 @@ class If(Stmt):
         
         return None
 
-
-@dataclass
-class For(Stmt):
-    """
-    Representa um laço de repetição.
-
-    Ex.: for (var i = 0; i < 10; i++) { ... }
-    """
-
-
 @dataclass
 class While(Stmt):
     """
