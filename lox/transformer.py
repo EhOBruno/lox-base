@@ -47,17 +47,61 @@ class LoxTransformer(Transformer):
     eq = op_handler(op.eq)
     ne = op_handler(op.ne)
 
-    def call(self, callee: Expr, params: list):
-        return Call(callee, params)
+    # Outras expressões
+    def call(self, callee: Expr, params=None):
+        return Call(callee, params or [])
         
     def params(self, *args):
-        params = list(args)
-        return params
+        return list(args)
 
-    # Comandos
+    def getattr(self, obj, name):
+        return Getattr(obj, name.name)
+
+    # Operadores unários
+    def neg(self, operand):
+        return UnaryOp(operand, op.neg) 
+
+    def not_(self, operand):
+        return UnaryOp(operand, op.not_)
+    
+    # Operadores lógicos
+    def and_(self, left, right):
+        return And(left, right)
+    
+    def or_(self, left, right):
+        return Or(left, right)
+    
+    # Atribuições
+    def assign(self, name: Var, value: Expr):
+        return Assign(name.name, value)
+
+    def setattr_assign(self, target, value):
+        return Setattr(target.obj, target.name, value)
+    
+    # Comandos e literais
     def print_cmd(self, expr):
         return Print(expr)
 
+    def var_decl(self, name, initializer=None):
+        if initializer is None:
+            initializer = Literal(None)
+        return VarDef(name.name, initializer)
+
+    def block(self, *stmts):
+        return Block(list(stmts))
+    
+    def if_cmd(self, condition, then_branch, else_branch=None):
+        if else_branch is None:
+            else_branch = Block([]) # Bloco vazio se não houver else
+        return If(condition, then_branch, else_branch)
+
+    def while_cmd(self, condition, body):
+        return While(condition, body)
+    
+    def expr_stmt(self, expr):
+        return ExprStmt(expr)
+
+    # Literais e Variáveis
     def VAR(self, token):
         name = str(token)
         return Var(name)
@@ -76,81 +120,55 @@ class LoxTransformer(Transformer):
     def BOOL(self, token):
         return Literal(token == "true")
 
-    def getattr(self, obj, name):
-        return Getattr(obj, name.name)
+    # Tratamento de 'for' (desugaring para 'while')
+    def empty_init(self):
+        return None 
 
-    def not_(self, expr):
-        return UnaryOp('!', expr)
+    def empty_cond(self):
+        return Literal(True)
 
-    def neg(self, expr):
-        return UnaryOp('-', expr)
+    def empty_incr(self):
+        return None
 
-    def and_(self, left, right):
-        return And(left, right)
-    
-    def or_(self, left, right):
-        return Or(left, right)
-
-    def assign(self, name: Var, value: Expr):
-        return Assign(name.name, value)
+    def for_cmd(self, init, cond, incr, body):
+        # Constrói o corpo do while
+        while_body = [body]
+        if incr is not None:
+            while_body.append(ExprStmt(incr))
         
-    def setattr_assign(self, target, value):
-        return Setattr(target.obj, target.name, value)
-    
-    def var_decl(self, name, value=None):
-        if value is None:
-            value = Literal(None)
-        return VarDef(name.name, value)
-    
-    def block(self, *declarations):
-        return Block(list(declarations))
-    
-    def if_cmd(self, condition: Expr, then_branch: Stmt, else_branch: Stmt = None):
-        if else_branch is None:
-            else_branch = Block([])
-        return If(condition, then_branch, else_branch)
-    
-    def while_cmd(self, condition: Expr, body: Stmt):
-        return While(condition, body)
-    
-    def for_init(self, init_part=None):
-        if init_part is None or (isinstance(init_part, str) and init_part == ';'):
-            return Block([])
+        # Constrói o laço while
+        if cond is None:
+            cond = Literal(True)
+        loop = While(cond, Block(while_body))
+
+        # Adiciona o inicializador, se existir
+        if init is not None:
+            return Block([init, loop])
         
-        if isinstance(init_part, VarDef):
-            return init_part
-        
-        if isinstance(init_part, Expr):
-            return Block([init_part])
-        
-        return init_part
+        return loop
+    
+    # Funções e retornos
+    def return_stmt(self, value=None):
+        return Return(value)
 
+    def function_declaration(self, name, params, body):
+        return Function(name.name, params or [], body)
 
-    def for_cond(self, condition=None):
-        if condition is None:
-            return Literal(True)
-        return condition
+    def fun_params(self, *params):
+        return list(params)
+    
+    def this(self, _):
+        return This()
 
+    def super_getattr(self, name):
+        return Super(name.name)
+    
+    def class_declaration(self, name):
+        # 'name' é um nó Var, então pegamos seu nome como string
+        return Class(name.name)
 
-    def for_incr(self, increment_part=None):
-        if increment_part is None:
-            return Block([])
-        
-        if isinstance(increment_part, Expr):
-            return Block([increment_part])
-        
-        return increment_part
+    def function_declaration(self, name, params, body):
+        return Function(name.name, params or [], body)
 
-
-    def for_cmd(self, init: Stmt, condition: Expr, increment: Stmt, body: Stmt):
-        inner_while_body_stmts = [body]
-        inner_while_body_stmts.append(increment)
-        inner_while_body = Block(inner_while_body_stmts)
-
-        while_loop = While(condition, inner_while_body)
-
-        outer_block_stmts = []
-        outer_block_stmts.append(init)
-        outer_block_stmts.append(while_loop)
-
-        return Block(outer_block_stmts)
+    def fun_params(self, *params):
+        return list(params)
