@@ -81,6 +81,7 @@ var_decl   : "var" VAR ("=" expr)? ";" -> var_decl
 
 ?atom      : call
            | getattr
+           | super_getattr
            | NUMBER
            | BOOL
            | VAR
@@ -89,6 +90,8 @@ var_decl   : "var" VAR ("=" expr)? ";" -> var_decl
            | "(" expr ")"
 
 getattr    : atom "." VAR
+
+super_getattr : "super" "." VAR
  
 call       : atom "(" params ")"
 params     : [expr ("," expr)*]

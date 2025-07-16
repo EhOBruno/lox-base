@@ -12,7 +12,7 @@ from .errors import SemanticError
 # Palavras reservadas da linguagem Lox
 RESERVED_WORDS = {
     "and", "class", "else", "false", "for", "fun", "if", "nil",
-    "or", "print", "return", "super", "this", "true", "var", "while"
+    "or", "print", "return", "this", "true", "var", "while"
 }
 
 # TIPOS BÁSICOS
@@ -147,21 +147,11 @@ class Super(Expr):
     method: str
     
     def eval(self, ctx: Ctx):
-        # Procura por uma classe no contexto (incluindo contextos pais) que tenha uma superclasse
-        # Esta é uma implementação simplificada para o exercício
-        current_ctx = ctx
-        while current_ctx is not None:
-            for var_name, var_value in current_ctx.scope.items():
-                if isinstance(var_value, LoxClass) and var_value.base is not None:
-                    # Encontrou uma classe com superclasse, tenta buscar o método na superclasse
-                    try:
-                        return var_value.base.get_method(self.method)
-                    except LoxError:
-                        continue
-            current_ctx = current_ctx.parent
-        
-        # Se não encontrar nenhuma classe com superclasse ou método, levanta erro
-        raise LoxError(f"Undefined property '{self.method}' in superclass.")
+        method_name = self.method
+        super_class = ctx["super"]
+        this = ctx["this"]
+        method = super_class.get_method(method_name)
+        return method.bind(this)
 
 @dataclass
 class Assign(Expr):
@@ -368,13 +358,20 @@ class Class(Stmt):
                 raise RuntimeError(f"Superclass must be a class.")
             superclass = superclass_value
 
+        # Criamos um escopo para os métodos possivelmente diferente do escopo 
+        # onde a classe está declarada
+        if superclass is None:
+            method_ctx = ctx
+        else:
+            method_ctx = ctx.push({"super": superclass})
+
         # Avaliamos cada método
         methods = {}
         for method in self.methods:
             method_name = method.name
             method_body = method.body
             method_args = [param.name for param in method.params if param is not None]
-            method_impl = LoxFunction(method_name, method_args, method_body, ctx)
+            method_impl = LoxFunction(method_name, method_args, method_body, method_ctx)
             methods[method_name] = method_impl
 
         lox_class = LoxClass(self.name, methods, superclass)
