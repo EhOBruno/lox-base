@@ -30,8 +30,18 @@ class LoxClass:
 
     def __call__(self, *args):
         # "Chamar" uma classe em Lox cria uma nova instância dela.
-        # Por enquanto, ignoramos os argumentos, pois ainda não temos inicializadores (init).
         instance = LoxInstance(klass=self)
+        
+        # Se a classe tem um método init, executa automaticamente
+        try:
+            init_method = self.get_method("init")
+            bound_init = init_method.bind(instance)
+            bound_init(*args)
+        except LoxError:
+            # Se não tem método init, mas foram passados argumentos, é um erro
+            if args:
+                raise TypeError(f"Expected 0 arguments but got {len(args)}.")
+        
         return instance
 
     def get_method(self, name: str) -> "LoxFunction":
@@ -69,6 +79,19 @@ class LoxInstance:
             return method.bind(self)
         except LoxError:
             raise AttributeError(f"'{self.klass.name}' object has no attribute '{name}'")
+
+    def init(self, *args):
+        """
+        Método especial para lidar com o comportamento único do init.
+        Executa o método init da classe e retorna a própria instância.
+        """
+        try:
+            init_method = self.klass.get_method("init")
+            bound_init = init_method.bind(self)
+            bound_init(*args)
+            return self  # Retornamos a instância e não o resultado de init
+        except LoxError:
+            raise AttributeError(f"'{self.klass.name}' object has no method 'init'")
 
     def __str__(self) -> str:
         return f"{self.klass.name} instance"
