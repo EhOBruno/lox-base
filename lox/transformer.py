@@ -55,6 +55,9 @@ class LoxTransformer(Transformer):
         return list(args)
 
     def getattr(self, obj, name):
+        # Se o objeto é uma variável "super", trate como uma expressão Super especial
+        if isinstance(obj, Var) and obj.name == "super":
+            return Super(name.name)
         return Getattr(obj, name.name)
 
     # Operadores unários

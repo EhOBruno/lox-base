@@ -124,7 +124,7 @@ class Call(Expr):
     
     def eval(self, ctx: Ctx):
         func = self.callee.eval(ctx)
-        args = [param.eval(ctx) for param in self.params]
+        args = [param.eval(ctx) for param in self.params if param is not None]
         if callable(func):
             return func(*args)
         raise TypeError(f"'{func}' não é uma função!")
@@ -136,6 +136,24 @@ class This(Expr):
 @dataclass
 class Super(Expr):
     """Acesso a método ou atributo da superclasse."""
+    method: str
+    
+    def eval(self, ctx: Ctx):
+        # Procura por uma classe no contexto (incluindo contextos pais) que tenha uma superclasse
+        # Esta é uma implementação simplificada para o exercício
+        current_ctx = ctx
+        while current_ctx is not None:
+            for var_name, var_value in current_ctx.scope.items():
+                if isinstance(var_value, LoxClass) and var_value.base is not None:
+                    # Encontrou uma classe com superclasse, tenta buscar o método na superclasse
+                    try:
+                        return var_value.base.get_method(self.method)
+                    except LoxError:
+                        continue
+            current_ctx = current_ctx.parent
+        
+        # Se não encontrar nenhuma classe com superclasse ou método, levanta erro
+        raise LoxError(f"Undefined property '{self.method}' in superclass.")
 
 @dataclass
 class Assign(Expr):
@@ -157,14 +175,8 @@ class Getattr(Expr):
     def eval(self, ctx: Ctx):
         obj_value = self.obj.eval(ctx)
         
-        # Para instâncias Lox, use a lógica específica de busca de métodos
-        if isinstance(obj_value, LoxInstance):
-            try:
-                return obj_value.klass.get_method(self.name)
-            except LoxError:
-                raise AttributeError(f"'{obj_value.klass.name}' object has no attribute '{self.name}'")
-        
-        # Para outros objetos, use getattr normal
+        # Use getattr normal para todos os objetos (incluindo LoxInstance)
+        # A lógica específica para LoxInstance está no __getattr__ da classe
         try:
             return getattr(obj_value, self.name)
         except AttributeError:
@@ -347,7 +359,7 @@ class Class(Stmt):
         for method in self.methods:
             method_name = method.name
             method_body = method.body
-            method_args = [param.name for param in method.params]
+            method_args = [param.name for param in method.params if param is not None]
             method_impl = LoxFunction(method_name, method_args, method_body, ctx)
             methods[method_name] = method_impl
 
