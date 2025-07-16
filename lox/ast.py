@@ -64,7 +64,7 @@ class Var(Expr):
         """Verifica se o nome da variável não é uma palavra reservada."""
         if self.name in RESERVED_WORDS:
             raise SemanticError(
-                f"Cannot use reserved word '{self.name}' as a variable name.",
+                f"Não é possível usar a palavra reservada '{self.name}' como nome de variável.",
                 token=self.name
             )
 
@@ -141,6 +141,18 @@ class This(Expr):
         except KeyError:
             raise NameError("variável this não existe!")
 
+    def validate_self(self, cursor: Cursor):
+        """Verifica se this está dentro de uma classe."""
+        # Itera pelos pais para encontrar uma Class
+        for parent_cursor in cursor.parents():
+            if isinstance(parent_cursor.node, Class):
+                return
+        # Se chegou aqui, não encontrou Class nos pais
+        raise SemanticError(
+            "Não é possível usar 'this' fora de uma classe.",
+            token="this"
+        )
+
 @dataclass
 class Super(Expr):
     """Acesso a método ou atributo da superclasse."""
@@ -152,6 +164,25 @@ class Super(Expr):
         this = ctx["this"]
         method = super_class.get_method(method_name)
         return method.bind(this)
+
+    def validate_self(self, cursor: Cursor):
+        """Verifica se super está dentro de uma classe que herda de outra."""
+        # Itera pelos pais para encontrar uma Class com superclasse
+        for parent_cursor in cursor.parents():
+            if isinstance(parent_cursor.node, Class):
+                if parent_cursor.node.superclass is not None:
+                    return
+                else:
+                    # Encontrou uma classe, mas sem superclasse
+                    raise SemanticError(
+                        "Não é possível usar 'super' em uma classe sem superclasse.",
+                        token="super"
+                    )
+        # Se chegou aqui, não encontrou Class nos pais
+        raise SemanticError(
+            "Não é possível usar 'super' fora de uma classe.",
+            token="super"
+        )
 
 @dataclass
 class Assign(Expr):
@@ -218,6 +249,18 @@ class Return(Stmt):
         return_value = self.value.eval(ctx) if self.value else None
         raise LoxReturn(return_value)
 
+    def validate_self(self, cursor: Cursor):
+        """Verifica se return está dentro de uma função."""
+        # Itera pelos pais para encontrar uma Function ou Method
+        for parent_cursor in cursor.parents():
+            if isinstance(parent_cursor.node, (Function, Method)):
+                return
+        # Se chegou aqui, não encontrou Function nem Method nos pais
+        raise SemanticError(
+            "Não é possível usar 'return' no nível superior do código.",
+            token="return"
+        )
+
 @dataclass
 class VarDef(Stmt):
     """Representa uma declaração de variável."""
@@ -233,7 +276,7 @@ class VarDef(Stmt):
         """Verifica se o nome da variável não é uma palavra reservada."""
         if self.name in RESERVED_WORDS:
             raise SemanticError(
-                f"Cannot use reserved word '{self.name}' as a variable name.",
+                f"Não é possível usar a palavra reservada '{self.name}' como nome de variável.",
                 token=self.name
             )
 
@@ -282,7 +325,7 @@ class Block(Node):
             if isinstance(stmt, VarDef):
                 if stmt.name in seen:
                     raise SemanticError(
-                        f"Variable '{stmt.name}' has already been declared in this block.",
+                        f"Variável '{stmt.name}' já foi declarada neste bloco.",
                         token=stmt.name
                     )
                 seen.add(stmt.name)
@@ -310,7 +353,7 @@ class Function(Stmt):
         for param in self.params:
             if param is not None and param.name in RESERVED_WORDS:
                 raise SemanticError(
-                    f"Cannot use reserved word '{param.name}' as a parameter name.",
+                    f"Não é possível usar a palavra reservada '{param.name}' como nome de parâmetro.",
                     token=param.name
                 )
         
@@ -319,7 +362,7 @@ class Function(Stmt):
             if param is not None:
                 if param.name in param_names:
                     raise SemanticError(
-                        f"Duplicate parameter name '{param.name}' in function declaration.",
+                        f"Nome de parâmetro duplicado '{param.name}' na declaração de função.",
                         token=param.name
                     )
                 param_names.add(param.name)
@@ -328,7 +371,7 @@ class Function(Stmt):
             if isinstance(stmt, VarDef):
                 if stmt.name in param_names:
                     raise SemanticError(
-                        f"Variable '{stmt.name}' shadows a function parameter.",
+                        f"Variável '{stmt.name}' oculta um parâmetro da função.",
                         token=stmt.name
                     )
 
