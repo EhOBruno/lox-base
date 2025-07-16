@@ -9,6 +9,7 @@ from .ctx import Ctx
 from .errors import SemanticError
 from .node import Node
 from .parser import lex, parse, parse_cst, parse_expr
+from .runtime import LoxClass, LoxInstance, LoxFunction, LoxError, LoxReturn
 
 __all__ = [
     "Ctx",
@@ -21,6 +22,11 @@ __all__ = [
     "parse_expr",
     "Stmt",
     "SemanticError",
+    "LoxClass",
+    "LoxInstance", 
+    "LoxFunction",
+    "LoxError",
+    "LoxReturn",
 ]
 
 

@@ -1,7 +1,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from typing import Callable
-from .runtime import LoxFunction, LoxReturn, LoxClass, print as lox_print
+from .runtime import LoxFunction, LoxReturn, LoxClass, LoxInstance, LoxError, print as lox_print
 
 from .ctx import Ctx
 
@@ -156,6 +156,15 @@ class Getattr(Expr):
 
     def eval(self, ctx: Ctx):
         obj_value = self.obj.eval(ctx)
+        
+        # Para instâncias Lox, use a lógica específica de busca de métodos
+        if isinstance(obj_value, LoxInstance):
+            try:
+                return obj_value.klass.get_method(self.name)
+            except LoxError:
+                raise AttributeError(f"'{obj_value.klass.name}' object has no attribute '{self.name}'")
+        
+        # Para outros objetos, use getattr normal
         try:
             return getattr(obj_value, self.name)
         except AttributeError:
@@ -325,6 +334,23 @@ class Class(Stmt):
     superclass: str | None = None
 
     def eval(self, ctx: Ctx):
-        klass = LoxClass(name=self.name)
-        ctx.var_def(self.name, klass)
+        # Carrega a superclasse, caso exista
+        superclass = None
+        if self.superclass:
+            superclass_value = ctx[self.superclass]
+            if not isinstance(superclass_value, LoxClass):
+                raise RuntimeError(f"Superclass must be a class.")
+            superclass = superclass_value
+
+        # Avaliamos cada método
+        methods = {}
+        for method in self.methods:
+            method_name = method.name
+            method_body = method.body
+            method_args = [param.name for param in method.params]
+            method_impl = LoxFunction(method_name, method_args, method_body, ctx)
+            methods[method_name] = method_impl
+
+        lox_class = LoxClass(self.name, methods, superclass)
+        ctx.var_def(self.name, lox_class)
         return None

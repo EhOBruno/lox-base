@@ -21,12 +21,35 @@ class LoxReturn(Exception):
 class LoxClass:
     """Representa uma classe Lox em tempo de execução."""
     name: str
+    methods: dict[str, "LoxFunction"] = None
+    base: "LoxClass" = None
+
+    def __post_init__(self):
+        if self.methods is None:
+            self.methods = {}
 
     def __call__(self, *args):
         # "Chamar" uma classe em Lox cria uma nova instância dela.
         # Por enquanto, ignoramos os argumentos, pois ainda não temos inicializadores (init).
         instance = LoxInstance(klass=self)
         return instance
+
+    def get_method(self, name: str) -> "LoxFunction":
+        """
+        Procura o método na classe atual.
+        Se não encontrar, procura nas bases.
+        Se não existir em nenhum dos dois lugares, levanta uma exceção LoxError.
+        """
+        # Procure o método na classe atual
+        if name in self.methods:
+            return self.methods[name]
+        
+        # Se não encontrar, procure nas bases
+        if self.base is not None:
+            return self.base.get_method(name)
+        
+        # Se não existir em nenhum dos dois lugares, levante uma exceção
+        raise LoxError(f"Undefined property '{name}'.")
 
     def __str__(self) -> str:
         return self.name
@@ -35,6 +58,15 @@ class LoxClass:
 class LoxInstance:
     """Representa uma instância de uma classe Lox."""
     klass: LoxClass
+
+    def __getattr__(self, name: str):
+        """
+        Busca um método na classe da instância (incluindo superclasses).
+        """
+        try:
+            return self.klass.get_method(name)
+        except LoxError:
+            raise AttributeError(f"'{self.klass.name}' object has no attribute '{name}'")
 
     def __str__(self) -> str:
         return f"{self.klass.name} instance"
@@ -177,5 +209,6 @@ __all__ = [
     "add", "sub", "mul", "truediv",
     "eq", "ne", "lt", "le", "gt", "ge",
     "neg", "not_",
-    "truthy", "show", "print", "LoxError"
+    "truthy", "show", "print", "LoxError",
+    "LoxClass", "LoxInstance", "LoxFunction", "LoxReturn"
 ]
