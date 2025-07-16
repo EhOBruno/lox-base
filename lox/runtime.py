@@ -135,6 +135,15 @@ class LoxFunction:
             self.ctx.push({"this": obj})
         )
 
+    def __eq__(self, other):
+        """Bound methods have identity equality."""
+        # LoxFunction equality is based on identity, not content
+        return self is other
+
+    def __hash__(self):
+        """Allow LoxFunction to be used in sets and as dict keys."""
+        return id(self)
+
 # --- Funções de Semântica do Lox ---
 
 def show(value: "Value") -> str:
@@ -181,6 +190,13 @@ def eq(a: "Value", b: "Value") -> bool:
     # Em Lox, tipos diferentes nunca são iguais.
     if type(a) is not type(b):
         return False
+    
+    # Handle NaN specially - NaN is never equal to anything, including itself
+    if isinstance(a, float) and isinstance(b, float):
+        import math
+        if math.isnan(a) or math.isnan(b):
+            return False
+    
     return a == b
 
 def ne(a: "Value", b: "Value") -> bool:
@@ -215,7 +231,12 @@ def truediv(a: float, b: float) -> float:
     """Operador de divisão Lox (/)."""
     _check_numbers(a, b)
     if b == 0:
-        raise LoxError("Division by zero.")
+        if a == 0:
+            # 0/0 should return NaN
+            return float('nan')
+        else:
+            # Non-zero / 0 should return infinity
+            return float('inf') if a > 0 else float('-inf')
     return a / b
 
 def lt(a: float, b: float) -> bool:

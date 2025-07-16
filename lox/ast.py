@@ -254,6 +254,12 @@ class Return(Stmt):
         # Itera pelos pais para encontrar uma Function ou Method
         for parent_cursor in cursor.parents():
             if isinstance(parent_cursor.node, (Function, Method)):
+                # Check if it's a return with value inside an init method
+                if isinstance(parent_cursor.node, Method) and parent_cursor.node.name == "init" and self.value is not None:
+                    raise SemanticError(
+                        "Can't return a value from an initializer.",
+                        token="return"
+                    )
                 return
         # Se chegou aqui, não encontrou Function nem Method nos pais
         raise SemanticError(
@@ -273,12 +279,27 @@ class VarDef(Stmt):
 
     # Validação Semântica para VarDef
     def validate_self(self, cursor: Cursor):
-        """Verifica se o nome da variável não é uma palavra reservada."""
+        """Verifica se o nome da variável não é uma palavra reservada e se não usa variável local em sua própria inicialização."""
         if self.name in RESERVED_WORDS:
             raise SemanticError(
                 f"Não é possível usar a palavra reservada '{self.name}' como nome de variável.",
                 token=self.name
             )
+        
+        # Check if the initializer uses the variable being declared
+        # Only check this if we're in a block (local scope)
+        parent = cursor.parent_cursor
+        if parent and isinstance(parent.node, Block):
+            def check_self_reference(node):
+                if isinstance(node, Var) and node.name == self.name:
+                    raise SemanticError(
+                        "Can't read local variable in its own initializer.",
+                        token=self.name
+                    )
+            
+            # Visit the initializer to check for self-references
+            if self.initializer:
+                self.initializer.visit({Var: check_self_reference})
 
 @dataclass
 class If(Stmt):
@@ -420,3 +441,11 @@ class Class(Stmt):
         lox_class = LoxClass(self.name, methods, superclass)
         ctx.var_def(self.name, lox_class)
         return None
+
+    def validate_self(self, cursor: Cursor):
+        """Verifica se a classe não herda de si mesma."""
+        if self.superclass is not None and self.superclass == self.name:
+            raise SemanticError(
+                "A class can't inherit from itself.",
+                token=self.superclass
+            )

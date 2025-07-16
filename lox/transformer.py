@@ -79,6 +79,10 @@ class LoxTransformer(Transformer):
     
     # Atribuições
     def assign(self, name: Var, value: Expr):
+        # Check if someone is trying to assign to 'this'
+        if isinstance(name, This):
+            from .errors import SemanticError
+            raise SemanticError("Invalid assignment target.", token="=")
         return Assign(name.name, value)
 
     def setattr_assign(self, target, value):
@@ -91,6 +95,10 @@ class LoxTransformer(Transformer):
     def var_decl(self, name, initializer=None):
         if initializer is None:
             initializer = Literal(None)
+        # Check if the name is actually a This node (when someone tries "var this = ...")
+        if isinstance(name, This):
+            from .errors import SemanticError
+            raise SemanticError("Expect variable name.", token="this")
         return VarDef(name.name, initializer)
 
     def block(self, *stmts):
