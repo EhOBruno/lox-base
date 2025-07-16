@@ -60,6 +60,14 @@ class Var(Expr):
         except KeyError:
             raise NameError(f"variável {self.name} não existe!")
 
+    def validate_self(self, cursor: Cursor):
+        """Verifica se o nome da variável não é uma palavra reservada."""
+        if self.name in RESERVED_WORDS:
+            raise SemanticError(
+                f"Cannot use reserved word '{self.name}' as a variable name.",
+                token=self.name
+            )
+
 @dataclass
 class Literal(Expr):
     """Representa valores literais no código."""
