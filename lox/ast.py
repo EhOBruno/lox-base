@@ -271,13 +271,11 @@ class Function(Stmt):
     body: Block
 
     def eval(self, ctx: Ctx):
-        # ... (código eval existente, sem alterações)
         param_names = [p.name for p in self.params]
         function = LoxFunction(self.name, param_names, self.body, ctx)
         ctx.var_def(self.name, function)
         return None
 
-    # Validação Semântica para Function
     def validate_self(self, cursor: Cursor):
         """
         Valida a declaração da função para:
@@ -285,7 +283,6 @@ class Function(Stmt):
         1. Parâmetros com nomes duplicados.
         2. Variáveis no corpo que sombreiam parâmetros.
         """
-        # 0. (NOVO) Verifica se algum parâmetro usa uma palavra reservada
         for param in self.params:
             if param.name in RESERVED_WORDS:
                 raise SemanticError(
@@ -293,7 +290,6 @@ class Function(Stmt):
                     token=param.name
                 )
         
-        # 1. Verifica parâmetros duplicados
         param_names = set()
         for param in self.params:
             if param.name in param_names:
@@ -303,7 +299,6 @@ class Function(Stmt):
                 )
             param_names.add(param.name)
 
-        # 2. Verifica se uma variável declarada no corpo tem o mesmo nome de um parâmetro
         for stmt in self.body.stmts:
             if isinstance(stmt, VarDef):
                 if stmt.name in param_names:
@@ -313,9 +308,21 @@ class Function(Stmt):
                     )
 
 @dataclass
+class Method(Node):
+    """Representa um método de classe."""
+    name: str
+    params: list[Var]
+    body: Block
+
+    def eval(self, ctx: Ctx):
+        pass
+
+@dataclass
 class Class(Stmt):
     """Representa uma declaração de classe."""
     name: str
+    methods: list[Method]
+    superclass: str | None = None
 
     def eval(self, ctx: Ctx):
         klass = LoxClass(name=self.name)

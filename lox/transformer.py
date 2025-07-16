@@ -163,9 +163,22 @@ class LoxTransformer(Transformer):
     def super_getattr(self, name):
         return Super(name.name)
     
-    def class_declaration(self, name):
+    def class_declaration(self, name, *args):
         # 'name' é um nó Var, então pegamos seu nome como string
-        return Class(name.name)
+        # args pode conter [superclass, *methods] ou apenas [*methods]
+        if args and isinstance(args[0], Var):
+            # Primeira arg é uma superclasse
+            superclass = args[0].name
+            methods = list(args[1:])
+        else:
+            # Não há superclasse
+            superclass = None
+            methods = list(args)
+        
+        return Class(name.name, methods, superclass)
+
+    def method_declaration(self, name, params, body):
+        return Method(name.name, params or [], body)
 
     def function_declaration(self, name, params, body):
         return Function(name.name, params or [], body)
