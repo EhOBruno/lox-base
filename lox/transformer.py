@@ -58,6 +58,9 @@ class LoxTransformer(Transformer):
         # Se o objeto é uma variável "super", trate como uma expressão Super especial
         if isinstance(obj, Var) and obj.name == "super":
             return Super(name.name)
+        # Se o objeto é uma variável "this", substitua por um nó This
+        if isinstance(obj, Var) and obj.name == "this":
+            return Getattr(This(), name.name)
         return Getattr(obj, name.name)
 
     # Operadores unários
@@ -107,6 +110,8 @@ class LoxTransformer(Transformer):
     # Literais e Variáveis
     def VAR(self, token):
         name = str(token)
+        if name == "this":
+            return This()
         return Var(name)
 
     def NUMBER(self, token):

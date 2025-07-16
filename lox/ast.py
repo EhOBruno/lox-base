@@ -1,5 +1,5 @@
 from abc import ABC
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 from .runtime import LoxFunction, LoxReturn, LoxClass, LoxInstance, LoxError, print as lox_print
 
@@ -132,6 +132,14 @@ class Call(Expr):
 @dataclass
 class This(Expr):
     """Acesso ao `this`."""
+    # Campo vazio para evitar problemas com dataclasses sem campos
+    _dummy: str = field(default="", init=False, repr=False)
+    
+    def eval(self, ctx: Ctx):
+        try:
+            return ctx["this"]
+        except KeyError:
+            raise NameError("variável this não existe!")
 
 @dataclass
 class Super(Expr):
@@ -192,6 +200,11 @@ class Setattr(Expr):
     def eval(self, ctx: Ctx):
         obj_val = self.obj.eval(ctx)
         val = self.value.eval(ctx)
+        
+        # Verificar se estamos tentando definir um campo numa classe ou função
+        if isinstance(obj_val, (LoxClass, LoxFunction)):
+            raise LoxError("Apenas instâncias podem ter campos.")
+        
         setattr(obj_val, self.name, val)
         return val
 
@@ -292,7 +305,7 @@ class Function(Stmt):
     body: Block
 
     def eval(self, ctx: Ctx):
-        param_names = [p.name for p in self.params]
+        param_names = [p.name for p in self.params if p is not None]
         function = LoxFunction(self.name, param_names, self.body, ctx)
         ctx.var_def(self.name, function)
         return None
@@ -305,7 +318,7 @@ class Function(Stmt):
         2. Variáveis no corpo que sombreiam parâmetros.
         """
         for param in self.params:
-            if param.name in RESERVED_WORDS:
+            if param is not None and param.name in RESERVED_WORDS:
                 raise SemanticError(
                     f"Cannot use reserved word '{param.name}' as a parameter name.",
                     token=param.name
@@ -313,12 +326,13 @@ class Function(Stmt):
         
         param_names = set()
         for param in self.params:
-            if param.name in param_names:
-                raise SemanticError(
-                    f"Duplicate parameter name '{param.name}' in function declaration.",
-                    token=param.name
-                )
-            param_names.add(param.name)
+            if param is not None:
+                if param.name in param_names:
+                    raise SemanticError(
+                        f"Duplicate parameter name '{param.name}' in function declaration.",
+                        token=param.name
+                    )
+                param_names.add(param.name)
 
         for stmt in self.body.stmts:
             if isinstance(stmt, VarDef):

@@ -64,7 +64,9 @@ class LoxInstance:
         Busca um método na classe da instância (incluindo superclasses).
         """
         try:
-            return self.klass.get_method(name)
+            method = self.klass.get_method(name)
+            # Importante: associamos o método à instância antes de retorná-lo
+            return method.bind(self)
         except LoxError:
             raise AttributeError(f"'{self.klass.name}' object has no attribute '{name}'")
 
@@ -100,6 +102,15 @@ class LoxFunction:
 
     def __call__(self, *args):
         return self.call(list(args))
+
+    def bind(self, obj: "Value") -> "LoxFunction":
+        """Associa essa função a um this específico."""
+        return LoxFunction(
+            self.name,
+            self.params,
+            self.body,
+            self.ctx.push({"this": obj})
+        )
 
 # --- Funções de Semântica do Lox ---
 
